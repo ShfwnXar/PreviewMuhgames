@@ -1,4 +1,3 @@
-// src/app/admin/dokumen/page.tsx
 "use client"
 
 import { useAuth } from "@/context/AuthContext"
@@ -42,7 +41,6 @@ function badge(status: DocumentStatus) {
   return <span className={`${base} bg-red-50 border-red-200 text-red-700`}>REJECTED</span>
 }
 
-// ✅ helper: bikin URL preview dari data FE sekarang
 function buildFileUrl(fileName?: string) {
   if (!fileName) return ""
   if (fileName.startsWith("http://") || fileName.startsWith("https://")) return fileName
@@ -50,7 +48,6 @@ function buildFileUrl(fileName?: string) {
   return `/uploads/${encodeURIComponent(fileName)}`
 }
 
-// ✅ helper: tebak mime dari ekstensi (tanpa butuh field mimeType di types)
 function guessMime(fileName?: string) {
   const n = (fileName || "").toLowerCase()
   if (n.endsWith(".pdf")) return "application/pdf"
@@ -75,7 +72,6 @@ export default function AdminDokumenPage() {
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [selectedAthleteId, setSelectedAthleteId] = useState<string>("")
 
-  // preview state
   const [preview, setPreview] = useState<{
     open: boolean
     title: string
@@ -131,7 +127,6 @@ export default function AdminDokumenPage() {
     else setSelectedAthleteId("")
   }, [targetUserId])
 
-  // FILTER atlet sesuai role (ADMIN_CABOR hanya atlet cabor yg dipegang)
   const visibleAthletes = useMemo(() => {
     if (!registration || !adminUser) return []
     if (adminUser.role === "ADMIN" || adminUser.role === "SUPER_ADMIN") return registration.athletes
@@ -189,7 +184,6 @@ export default function AdminDokumenPage() {
     const athlete = reg.athletes.find((a) => a.id === selectedAthleteId)
     if (!athlete) return
 
-    // SECURITY scope
     if (adminUser?.role === "ADMIN_CABOR" && !canAccessSport(athlete.sportId)) {
       alert("Anda tidak memiliki akses untuk cabor ini.")
       return
@@ -229,7 +223,6 @@ export default function AdminDokumenPage() {
         </div>
       </div>
 
-      {/* pilih kontingen */}
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
         <div className="text-sm font-extrabold text-gray-900 mb-2">Pilih Kontingen</div>
         {visibleKontingen.length === 0 ? (
@@ -249,7 +242,6 @@ export default function AdminDokumenPage() {
         )}
       </div>
 
-      {/* konten utama 2 kolom */}
       {!registration ? (
         <div className="bg-white border rounded-2xl p-6 shadow-sm text-sm text-gray-500">
           Kontingen ini belum memulai pendaftaran / belum ada data registration.
@@ -260,7 +252,6 @@ export default function AdminDokumenPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* KIRI: data atlet */}
           <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-4">
             <div className="text-lg font-extrabold text-gray-900">Data Atlet</div>
 
@@ -297,7 +288,7 @@ export default function AdminDokumenPage() {
                   {registration.sports.find((s) => s.id === selectedAthlete.sportId)?.name ?? selectedAthlete.sportId}
                 </div>
 
-                {/* ✅ FIX: Category pakai .label, bukan .name */}
+                {/* ✅ FIX: Category pakai label */}
                 <div className="text-sm">
                   <b>Kategori:</b>{" "}
                   {registration.sports
@@ -311,7 +302,6 @@ export default function AdminDokumenPage() {
             )}
           </div>
 
-          {/* KANAN: dokumen */}
           <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-4">
             <div className="text-lg font-extrabold text-gray-900">Dokumen</div>
 
@@ -333,10 +323,8 @@ export default function AdminDokumenPage() {
                             {badge(d.status)}
                             <span className="text-xs text-gray-500">{d.fileName ?? "-"}</span>
                           </div>
-
-                          {/* ✅ FIX: DocumentItem di types gak punya uploadedAt */}
                           <div className="text-xs text-gray-500 mt-1">
-                            Upload: {"-"}
+                            Upload: {d.uploadedAt ? new Date(d.uploadedAt).toLocaleString("id-ID") : "-"}
                           </div>
                         </div>
 
@@ -361,7 +349,6 @@ export default function AdminDokumenPage() {
                           >
                             Approve
                           </button>
-
                           <button
                             type="button"
                             onClick={() => updateDoc(docKey, "REJECTED")}
@@ -387,7 +374,6 @@ export default function AdminDokumenPage() {
         </div>
       )}
 
-      {/* MODAL PREVIEW */}
       {preview.open && (
         <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
           <div className="w-full max-w-5xl bg-white rounded-2xl shadow-xl border overflow-hidden">

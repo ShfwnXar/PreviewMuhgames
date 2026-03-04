@@ -3,7 +3,6 @@
 // =============================
 
 export type CategoryType = "individu" | "ganda" | "tim"
-
 export type Gender = "PUTRA" | "PUTRI"
 
 // =============================
@@ -50,16 +49,14 @@ export type Athlete = {
 // DOKUMEN ATLET (STEP 4)
 // =============================
 
-export type DocumentStatus =
-  | "EMPTY"
-  | "UPLOADED"
-  | "APPROVED"
-  | "REJECTED"
+export type DocumentStatus = "EMPTY" | "UPLOADED" | "APPROVED" | "REJECTED"
 
 export type DocumentItem = {
   fileName?: string
   status: DocumentStatus
   note?: string // catatan admin jika ditolak
+
+  uploadedAt?: string // ✅ ADD (karena admin/dokumen menampilkan waktu upload)
 }
 
 export type AthleteDocuments = {
@@ -76,17 +73,16 @@ export type AthleteDocuments = {
 // PEMBAYARAN
 // =============================
 
-export type PaymentStatus =
-  | "NONE"
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
+export type PaymentStatus = "NONE" | "PENDING" | "APPROVED" | "REJECTED"
 
 export type Payment = {
   proofFileName?: string
+  proofFileId?: string // ✅ ADD (karena admin/pembayaran pakai openFileInNewTab)
   status: PaymentStatus
   uploadedAt?: string
   note?: string // catatan admin jika reject
+
+  totalFee?: number // ✅ ADD (dipakai admin/statistik & admin/pembayaran)
 }
 
 // =============================

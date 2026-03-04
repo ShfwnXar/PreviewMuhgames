@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext"
 import { useEffect, useMemo, useState } from "react"
 import type { Registration, PaymentStatus } from "@/types/registration"
+import { openFileInNewTab } from "@/lib/fileStore"
 
 function safeParse<T>(value: string | null, fallback: T): T {
   try {
@@ -11,28 +12,6 @@ function safeParse<T>(value: string | null, fallback: T): T {
   } catch {
     return fallback
   }
-}
-
-// ✅ hitung total biaya tanpa field payment.totalFee
-// TODO: sesuaikan rumus biaya sesuai aturan MG 2026 kamu
-function getTotalFee(reg: Registration) {
-  const athletes = reg.athletes?.length ?? 0
-  const officials = reg.officials ?? 0
-
-  // sementara 0 biar aman compile (ubah sesuai kebutuhan)
-  const feePerAthlete = 0
-  const feePerOfficial = 0
-
-  return athletes * feePerAthlete + officials * feePerOfficial
-}
-
-// ✅ helper buka file (tanpa proofFileId)
-// asumsikan file diserve lewat /uploads/<fileName>
-function buildFileUrl(fileName?: string) {
-  if (!fileName) return ""
-  if (fileName.startsWith("http://") || fileName.startsWith("https://")) return fileName
-  if (fileName.startsWith("/")) return fileName
-  return `/uploads/${encodeURIComponent(fileName)}`
 }
 
 export default function AdminPembayaranPage() {
@@ -48,7 +27,6 @@ export default function AdminPembayaranPage() {
     return getAllUsers().filter((u) => u.role === "PESERTA")
   }, [getAllUsers])
 
-  // Build list kontingen + reg untuk filtering
   const pesertaWithReg = useMemo(() => {
     return pesertaUsersAll
       .map((u) => {
@@ -58,16 +36,11 @@ export default function AdminPembayaranPage() {
       .filter((x) => !!x.reg)
   }, [pesertaUsersAll])
 
-  // Filter by role
   const visibleKontingen = useMemo(() => {
     if (!adminUser) return []
 
-    // ADMIN & SUPER_ADMIN: semua kontingen yang punya reg
-    if (adminUser.role === "ADMIN" || adminUser.role === "SUPER_ADMIN") {
-      return pesertaWithReg
-    }
+    if (adminUser.role === "ADMIN" || adminUser.role === "SUPER_ADMIN") return pesertaWithReg
 
-    // ADMIN_CABOR: hanya kontingen yang ikut sport yang di-assign
     if (adminUser.role === "ADMIN_CABOR") {
       return pesertaWithReg.filter(({ reg }) => {
         const sportIds = reg!.sports.map((s) => s.id)
@@ -79,7 +52,6 @@ export default function AdminPembayaranPage() {
   }, [adminUser, pesertaWithReg, canAccessSport])
 
   useEffect(() => {
-    // set kontingen default (first visible)
     if (visibleKontingen.length > 0 && !targetUserId) {
       setTargetUserId(visibleKontingen[0].u.id)
     }
@@ -112,7 +84,6 @@ export default function AdminPembayaranPage() {
     const reg = safeParse<Registration | null>(localStorage.getItem(key), null)
     if (!reg) return
 
-    // SECURITY (frontend-only): admin cabor tidak boleh edit jika tidak ada sport access
     if (adminUser?.role === "ADMIN_CABOR") {
       const sportIds = reg.sports.map((s) => s.id)
       const allowed = sportIds.some((sid) => canAccessSport(sid))
@@ -141,15 +112,11 @@ export default function AdminPembayaranPage() {
     }
 
     localStorage.setItem(key, JSON.stringify(updated))
-
-    // mock key global (tetap dipakai beberapa halaman)
     localStorage.setItem("mg26_mock_payment_status", status === "NONE" ? "NONE" : status)
 
     setRegistration(updated)
     alert("Status pembayaran berhasil disimpan.")
   }
-
-  const proofUrl = registration?.payment?.proofFileName ? buildFileUrl(registration.payment.proofFileName) : ""
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -203,24 +170,19 @@ export default function AdminPembayaranPage() {
               <div className="mt-1">
                 <b>Waktu upload:</b> {registration.payment.uploadedAt ?? "-"}
               </div>
-
-              {/* ✅ FIX: total fee dihitung, bukan payment.totalFee */}
               <div className="mt-1">
-                <b>Total biaya:</b> Rp {getTotalFee(registration).toLocaleString("id-ID")}
+                <b>Total biaya:</b> Rp {(registration.payment.totalFee ?? 0).toLocaleString("id-ID")}
               </div>
             </div>
 
-            {/* ✅ FIX: buka bukti dari proofFileName */}
             <div className="pt-3">
-              {proofUrl ? (
-                <a
-                  href={proofUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex px-4 py-2 rounded-lg border bg-white font-semibold hover:bg-gray-50"
+              {registration.payment.proofFileId ? (
+                <button
+                  onClick={() => openFileInNewTab(registration.payment.proofFileId!, registration.payment.proofFileName)}
+                  className="px-4 py-2 rounded-lg border bg-white font-semibold hover:bg-gray-50"
                 >
                   Buka Bukti Pembayaran
-                </a>
+                </button>
               ) : (
                 <div className="text-sm text-gray-500">Belum ada file bukti.</div>
               )}
