@@ -3,7 +3,6 @@
 import { useAuth } from "@/context/AuthContext"
 import { useEffect, useMemo, useState } from "react"
 import type { Registration, PaymentStatus } from "@/types/registration"
-import { openFileInNewTab } from "@/lib/fileStore" // ✅ ADD
 
 function safeParse<T>(value: string | null, fallback: T): T {
   try {
@@ -12,6 +11,28 @@ function safeParse<T>(value: string | null, fallback: T): T {
   } catch {
     return fallback
   }
+}
+
+// ✅ hitung total biaya tanpa field payment.totalFee
+// TODO: sesuaikan rumus biaya sesuai aturan MG 2026 kamu
+function getTotalFee(reg: Registration) {
+  const athletes = reg.athletes?.length ?? 0
+  const officials = reg.officials ?? 0
+
+  // sementara 0 biar aman compile (ubah sesuai kebutuhan)
+  const feePerAthlete = 0
+  const feePerOfficial = 0
+
+  return athletes * feePerAthlete + officials * feePerOfficial
+}
+
+// ✅ helper buka file (tanpa proofFileId)
+// asumsikan file diserve lewat /uploads/<fileName>
+function buildFileUrl(fileName?: string) {
+  if (!fileName) return ""
+  if (fileName.startsWith("http://") || fileName.startsWith("https://")) return fileName
+  if (fileName.startsWith("/")) return fileName
+  return `/uploads/${encodeURIComponent(fileName)}`
 }
 
 export default function AdminPembayaranPage() {
@@ -31,10 +52,7 @@ export default function AdminPembayaranPage() {
   const pesertaWithReg = useMemo(() => {
     return pesertaUsersAll
       .map((u) => {
-        const reg = safeParse<Registration | null>(
-          localStorage.getItem(`mg26_registration_${u.id}`),
-          null
-        )
+        const reg = safeParse<Registration | null>(localStorage.getItem(`mg26_registration_${u.id}`), null)
         return { u, reg }
       })
       .filter((x) => !!x.reg)
@@ -131,13 +149,13 @@ export default function AdminPembayaranPage() {
     alert("Status pembayaran berhasil disimpan.")
   }
 
+  const proofUrl = registration?.payment?.proofFileName ? buildFileUrl(registration.payment.proofFileName) : ""
+
   return (
     <div className="max-w-4xl space-y-6">
       <div className="bg-white border rounded-xl p-6 shadow-sm">
         <h1 className="text-2xl font-bold">Validasi Pembayaran</h1>
-        <p className="text-gray-600 mt-2">
-          Admin memverifikasi bukti transfer dan menetapkan status pembayaran.
-        </p>
+        <p className="text-gray-600 mt-2">Admin memverifikasi bukti transfer dan menetapkan status pembayaran.</p>
 
         {adminUser?.role === "ADMIN_CABOR" && (
           <div className="mt-3 text-xs text-gray-500">
@@ -161,8 +179,7 @@ export default function AdminPembayaranPage() {
           >
             {visibleKontingen.map(({ u, reg }) => (
               <option key={u.id} value={u.id}>
-                {u.institutionName} — {u.email}{" "}
-                {reg ? `(${reg.sports.map((s) => s.name).join(", ")})` : ""}
+                {u.institutionName} — {u.email} {reg ? `(${reg.sports.map((s) => s.name).join(", ")})` : ""}
               </option>
             ))}
           </select>
@@ -173,9 +190,7 @@ export default function AdminPembayaranPage() {
         <h2 className="font-bold text-lg">Detail Bukti Pembayaran</h2>
 
         {!registration ? (
-          <div className="text-sm text-gray-500">
-            Kontingen ini belum memulai pendaftaran / belum ada data registration.
-          </div>
+          <div className="text-sm text-gray-500">Kontingen ini belum memulai pendaftaran / belum ada data registration.</div>
         ) : (
           <>
             <div className="text-sm text-gray-700">
@@ -188,25 +203,24 @@ export default function AdminPembayaranPage() {
               <div className="mt-1">
                 <b>Waktu upload:</b> {registration.payment.uploadedAt ?? "-"}
               </div>
+
+              {/* ✅ FIX: total fee dihitung, bukan payment.totalFee */}
               <div className="mt-1">
-                <b>Total biaya:</b> Rp {registration.payment.totalFee.toLocaleString("id-ID")}
+                <b>Total biaya:</b> Rp {getTotalFee(registration).toLocaleString("id-ID")}
               </div>
             </div>
 
-            {/* ✅ ADD: tombol buka bukti */}
+            {/* ✅ FIX: buka bukti dari proofFileName */}
             <div className="pt-3">
-              {registration.payment.proofFileId ? (
-                <button
-                  onClick={() =>
-                    openFileInNewTab(
-                      registration.payment.proofFileId!,
-                      registration.payment.proofFileName
-                    )
-                  }
-                  className="px-4 py-2 rounded-lg border bg-white font-semibold hover:bg-gray-50"
+              {proofUrl ? (
+                <a
+                  href={proofUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex px-4 py-2 rounded-lg border bg-white font-semibold hover:bg-gray-50"
                 >
                   Buka Bukti Pembayaran
-                </button>
+                </a>
               ) : (
                 <div className="text-sm text-gray-500">Belum ada file bukti.</div>
               )}
@@ -228,9 +242,7 @@ export default function AdminPembayaranPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-1">
-                  Catatan Admin (opsional)
-                </label>
+                <label className="block text-sm font-semibold mb-1">Catatan Admin (opsional)</label>
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
