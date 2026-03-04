@@ -8,7 +8,7 @@ import type {
   ResetPasswordRequest,
 } from "@/types/api"
 
-type StoredUser = User & { password: string }
+type StoredUser = User & { password: string; isActive?: boolean }
 
 const LS_USERS_KEY = "mg26_users"
 const LS_SESSION_KEY = "mg26_session"
@@ -75,7 +75,10 @@ export class MockAuthRepo implements AuthRepository {
     const users = getAllUsers()
     const found = users.find((u) => normalizeEmail(u.email) === email)
     if (!found) return { ok: false, message: "Akun tidak ditemukan." }
-    if (found.isActive === false) return { ok: false, message: "Akun nonaktif. Hubungi panitia." }
+
+    // ✅ default aktif jika field belum ada (data lama)
+    if ((found.isActive ?? true) === false) return { ok: false, message: "Akun nonaktif. Hubungi panitia." }
+
     if (found.password !== password) return { ok: false, message: "Password salah." }
 
     localStorage.setItem(LS_SESSION_KEY, JSON.stringify({ userId: found.id }))
@@ -177,7 +180,6 @@ export class MockAuthRepo implements AuthRepository {
   }
 
   async createAdmin(input: CreateAdminRequest) {
-    // mock: allow create admin from UI guard only; still validate
     const email = normalizeEmail(input.email)
     if (!isValidEmail(email)) return { ok: false, message: "Format email tidak valid." }
     if ((input.password || "").length < 6) return { ok: false, message: "Password minimal 6 karakter." }

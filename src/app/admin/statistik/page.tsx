@@ -179,7 +179,12 @@ export default function AdminStatistikPage() {
     for (const { reg } of visibleKontingen) {
       const st = reg.payment?.status ?? "NONE"
       counts[st] += 1
-      totalFee += Number(reg.payment?.totalFee ?? 0)
+
+      // ✅ Aman Vercel/TS: totalFee optional di Payment (gunakan ?? 0)
+      totalFee += Number((reg.payment as any)?.totalFee ?? 0)
+      // kalau kamu sudah tambahkan totalFee?: number di types/registration.ts,
+      // kamu bisa pakai versi ini:
+      // totalFee += Number(reg.payment?.totalFee ?? 0)
     }
 
     return {
@@ -191,7 +196,6 @@ export default function AdminStatistikPage() {
 
   // ===== Document Statistics (per athlete doc file) =====
   const documentStats = useMemo(() => {
-    // hitung per-file (5 dokumen per atlet)
     const counts: Record<DocumentStatus, number> = {
       EMPTY: 0,
       UPLOADED: 0,
@@ -227,7 +231,6 @@ export default function AdminStatistikPage() {
 
   // ===== Breakdown per sport/category =====
   const breakdown = useMemo(() => {
-    // sportId -> categoryId -> count
     const map = new Map<string, Map<string, number>>()
     const sportName = new Map<string, string>()
 
@@ -267,12 +270,6 @@ export default function AdminStatistikPage() {
     const uploaded = documentStats.counts.UPLOADED
     const rejected = documentStats.counts.REJECTED
     const empty = documentStats.counts.EMPTY
-
-    // interpretasi:
-    // - "sudah divalidasi" = APPROVED
-    // - "belum divalidasi" = UPLOADED (sudah ada file tapi belum diputus)
-    // - "ditolak" = REJECTED
-    // - "belum upload" = EMPTY (bonus info)
     return { approved, uploaded, rejected, empty }
   }, [documentStats])
 
@@ -283,12 +280,8 @@ export default function AdminStatistikPage() {
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
           <div>
             <div className="text-xs font-extrabold text-gray-500">ADMIN PANEL</div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">
-              Statistik Pendaftaran
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Rekap pembayaran & dokumen, serta breakdown pendaftar per cabor dan kategori.
-            </p>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900">Statistik Pendaftaran</h1>
+            <p className="text-gray-600 mt-2">Rekap pembayaran & dokumen, serta breakdown pendaftar per cabor dan kategori.</p>
 
             {adminUser?.role === "ADMIN_CABOR" && (
               <div className="mt-3 text-xs text-gray-500">
@@ -343,9 +336,7 @@ export default function AdminStatistikPage() {
                 </option>
               ))}
             </select>
-            <div className="text-xs text-gray-500 mt-2">
-              Kategori diambil dari data atlet (Step 3).
-            </div>
+            <div className="text-xs text-gray-500 mt-2">Kategori diambil dari data atlet (Step 3).</div>
           </div>
         </div>
       </div>
@@ -362,28 +353,23 @@ export default function AdminStatistikPage() {
             {statusBadge(payKind("REJECTED"), `REJECTED: ${fmt(paymentStats.counts.REJECTED)}`)}
             {statusBadge(payKind("NONE"), `NONE: ${fmt(paymentStats.counts.NONE)}`)}
           </div>
+          <div className="mt-3 text-xs text-gray-500">
+            Total biaya (opsional): <b>Rp {fmt(paymentStats.totalFee)}</b>
+          </div>
         </div>
 
         {/* Atlet */}
         <div className="bg-white border rounded-2xl p-6 shadow-sm">
-          <div className="text-sm text-gray-600 font-semibold">
-            Total Atlet (sesuai filter)
-          </div>
+          <div className="text-sm text-gray-600 font-semibold">Total Atlet (sesuai filter)</div>
           <div className="mt-2 text-3xl font-extrabold text-gray-900">{fmt(documentStats.totalAthletes)}</div>
-          <div className="text-xs text-gray-500 mt-2">
-            Mengikuti filter cabor/kategori di atas.
-          </div>
+          <div className="text-xs text-gray-500 mt-2">Mengikuti filter cabor/kategori di atas.</div>
         </div>
 
         {/* Dokumen */}
         <div className="bg-white border rounded-2xl p-6 shadow-sm">
-          <div className="text-sm text-gray-600 font-semibold">
-            Status Dokumen (per-file, sesuai filter)
-          </div>
+          <div className="text-sm text-gray-600 font-semibold">Status Dokumen (per-file, sesuai filter)</div>
           <div className="mt-2 text-3xl font-extrabold text-gray-900">{fmt(documentStats.totalExpected)}</div>
-          <div className="text-xs text-gray-500 mt-1">
-            Total file yang diharapkan = atlet × 5 dokumen.
-          </div>
+          <div className="text-xs text-gray-500 mt-1">Total file yang diharapkan = atlet × 5 dokumen.</div>
 
           <div className="mt-3 flex flex-wrap gap-2">
             {statusBadge("ok", `Sudah divalidasi: ${fmt(docGroups.approved)}`)}
@@ -403,15 +389,11 @@ export default function AdminStatistikPage() {
               Jumlah atlet per <b>cabor</b> dan <b>kategori</b> (mengikuti filter).
             </div>
           </div>
-          <div className="text-xs text-gray-500">
-            Baris: {fmt(breakdown.length)}
-          </div>
+          <div className="text-xs text-gray-500">Baris: {fmt(breakdown.length)}</div>
         </div>
 
         {breakdown.length === 0 ? (
-          <div className="mt-4 text-sm text-gray-500">
-            Belum ada data atlet pada filter ini.
-          </div>
+          <div className="mt-4 text-sm text-gray-500">Belum ada data atlet pada filter ini.</div>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-[720px] w-full text-sm">
@@ -453,9 +435,7 @@ export default function AdminStatistikPage() {
           <li>
             “Sudah divalidasi” pada dokumen dihitung dari status <b>APPROVED</b>.
           </li>
-          <li>
-            Jika ingin statistik “per kontingen” (semua dokumen atletnya lengkap/valid), nanti kita buat mode agregasi tambahan.
-          </li>
+          <li>Jika ingin statistik “per kontingen” (semua dokumen atletnya lengkap/valid), nanti kita buat mode agregasi tambahan.</li>
         </ul>
       </div>
     </div>
