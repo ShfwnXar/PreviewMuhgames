@@ -296,12 +296,16 @@ export default function AdminDokumenPage() {
                   <b>Cabor:</b>{" "}
                   {registration.sports.find((s) => s.id === selectedAthlete.sportId)?.name ?? selectedAthlete.sportId}
                 </div>
+
+                {/* ✅ FIX: Category pakai .label, bukan .name */}
                 <div className="text-sm">
                   <b>Kategori:</b>{" "}
                   {registration.sports
                     .find((s) => s.id === selectedAthlete.sportId)
-                    ?.categories?.find((c) => c.id === selectedAthlete.categoryId)?.name ?? selectedAthlete.categoryId}
+                    ?.categories.find((c) => c.id === selectedAthlete.categoryId)
+                    ?.label ?? selectedAthlete.categoryId}
                 </div>
+
                 <div className="text-xs text-gray-500 pt-2">Athlete ID: {selectedAthlete.id}</div>
               </div>
             )}
@@ -329,8 +333,10 @@ export default function AdminDokumenPage() {
                             {badge(d.status)}
                             <span className="text-xs text-gray-500">{d.fileName ?? "-"}</span>
                           </div>
+
+                          {/* ✅ FIX: DocumentItem di types gak punya uploadedAt */}
                           <div className="text-xs text-gray-500 mt-1">
-                            Upload: {d.uploadedAt ? new Date(d.uploadedAt).toLocaleString("id-ID") : "-"}
+                            Upload: {"-"}
                           </div>
                         </div>
 
@@ -355,6 +361,7 @@ export default function AdminDokumenPage() {
                           >
                             Approve
                           </button>
+
                           <button
                             type="button"
                             onClick={() => updateDoc(docKey, "REJECTED")}
