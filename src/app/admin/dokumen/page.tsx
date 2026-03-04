@@ -45,22 +45,27 @@ function badge(status: DocumentStatus) {
 // ✅ helper: bikin URL preview dari data FE sekarang
 function buildFileUrl(fileName?: string) {
   if (!fileName) return ""
-  // Jika nanti BE memberi URL full (https://...), langsung pakai
   if (fileName.startsWith("http://") || fileName.startsWith("https://")) return fileName
-  // Kalau kamu simpan path absolute (misal /uploads/xxx.pdf)
   if (fileName.startsWith("/")) return fileName
-  // Default fallback: kamu bisa samakan folder ini dengan sistem upload kamu
   return `/uploads/${encodeURIComponent(fileName)}`
 }
 
+// ✅ helper: tebak mime dari ekstensi (tanpa butuh field mimeType di types)
+function guessMime(fileName?: string) {
+  const n = (fileName || "").toLowerCase()
+  if (n.endsWith(".pdf")) return "application/pdf"
+  if (n.endsWith(".png")) return "image/png"
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg"
+  if (n.endsWith(".webp")) return "image/webp"
+  return ""
+}
+
 function isImageMime(mime?: string) {
-  if (!mime) return false
-  return mime.startsWith("image/")
+  return !!mime && mime.startsWith("image/")
 }
 
 function isPdfMime(mime?: string) {
-  if (!mime) return false
-  return mime === "application/pdf" || mime.includes("pdf")
+  return mime === "application/pdf"
 }
 
 export default function AdminDokumenPage() {
@@ -157,13 +162,14 @@ export default function AdminDokumenPage() {
   const openPreview = (docKey: DocKey) => {
     if (!selectedDocs) return
     const fileName = selectedDocs[docKey]?.fileName
-    const mime = selectedDocs[docKey]?.mimeType
     const url = buildFileUrl(fileName)
 
     if (!fileName || !url) {
       alert("File belum diupload / URL belum tersedia.")
       return
     }
+
+    const mime = guessMime(fileName)
 
     setPreview({
       open: true,
@@ -217,15 +223,8 @@ export default function AdminDokumenPage() {
       <div className="bg-white border rounded-2xl p-6 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900">Admin • Validasi Dokumen Atlet</h1>
-            <p className="text-gray-600 mt-2">
-              Kiri: data diri atlet + cabor + kategori. Kanan: preview dokumen + approve/reject per dokumen.
-            </p>
-            {adminUser?.role === "ADMIN_CABOR" && (
-              <div className="mt-2 text-xs text-gray-500">
-                Mode Admin Cabor — hanya menampilkan kontingen & atlet dari cabor yang kamu pegang.
-              </div>
-            )}
+            <h1 className="text-2xl font-extrabold text-gray-900">Validasi Dokumen Atlet</h1>
+            <p className="text-gray-600 mt-2">Menu Validasi Dokumen Peserta lomba</p>
           </div>
         </div>
       </div>
@@ -367,7 +366,6 @@ export default function AdminDokumenPage() {
                         </div>
                       </div>
 
-                      {/* quick inline hint */}
                       {canOpen && (
                         <div className="mt-3 text-xs text-gray-500">
                           Preview URL: <span className="break-all">{url}</span>
@@ -410,7 +408,6 @@ export default function AdminDokumenPage() {
             </div>
 
             <div className="p-4">
-              {/* Image */}
               {isImageMime(preview.mime) && (
                 <div className="w-full flex justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -418,14 +415,12 @@ export default function AdminDokumenPage() {
                 </div>
               )}
 
-              {/* PDF */}
               {isPdfMime(preview.mime) && (
                 <div className="w-full h-[70vh] rounded-xl border overflow-hidden">
                   <iframe title="pdf-preview" src={preview.url} className="w-full h-full" />
                 </div>
               )}
 
-              {/* Unknown */}
               {!isImageMime(preview.mime) && !isPdfMime(preview.mime) && (
                 <div className="text-sm text-gray-600">
                   Tipe file: <b>{preview.mime || "unknown"}</b>. Silakan klik <b>Buka Tab Baru</b> untuk melihat file.
